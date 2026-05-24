@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>停车场智慧监控大屏</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #030a12;
+            font-family: "Microsoft YaHei", "Heiti SC", sans-serif;
+            overflow: hidden;
+            color: #fff;
+            box-sizing: border-box;
+            transform: scale(0.95);
+            transform-origin: top;
+        }
+
+        :root {
+            --cyan: #00d8ff;
+            --dark-cyan: #0d5c7a;
+            --blue-btn: #1f8fff;
+            --blue-btn-dark: #156fd1;
+            --border-glow: 0 0 10px rgba(0, 216, 255, 0.35);
+            --text-glow: 0 0 5px rgba(0, 216, 255, 0.6);
+        }
+
+        #top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 6vh;
+            padding: 0 2vw;
+            background: linear-gradient(180deg, rgba(0,216,255,0.08) 0%, rgba(0,0,0,0) 100%);
+            border-bottom: 1px solid var(--dark-cyan);
+            font-size: 1.1vw;
+            position: relative;
+            z-index: 10;
+        }
+
+        #top-bar #platform {
+            font-size: 1.8vw;
+            font-weight: bold;
+            color: var(--cyan);
+            text-shadow: 0 0 10px rgba(0,216,255,0.6);
+        }
+
+        #top-bar .info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5vw;
+        }
+
+        #main-container {
+            display: flex;
+            height: 94vh;
+            padding: 1.5vh 1.5vw;
+            gap: 1.5vw;
+            box-sizing: border-box;
+        }
+
+        .sidebar {
+            width: 25vw;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh;
+        }
+
+        #center-core {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh;
+        }
+
+        .module {
+            background-color: rgba(7, 20, 33, 0.82);
+            border: 1px solid #1a3a4f;
+            border-radius: 4px;
+            box-shadow: inset 0 0 15px rgba(0,216,255,0.08);
+            position: relative;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        .module::before, .module::after {
+            content: "";
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-color: var(--cyan);
+            border-style: solid;
+            opacity: 0.8;
+        }
+
+        .module::before {
+            top: -1px;
+            left: -1px;
+            border-width: 2px 0 0 2px;
+        }
+
+        .module::after {
+            bottom: -1px;
+            right: -1px;
+            border-width: 0 2px 2px 0;
+        }
+
+        .module-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--cyan);
+            font-size: 1.1vw;
+            font-weight: bold;
+            padding-bottom: 2px;
+            border-bottom: 1px solid rgba(0,216,255,0.2);
+            margin-bottom: 10px;
+        }
+
+        .module-header .icon {
+            width: 1.2vw;
+            height: 1.2vw;
+            background-color: var(--cyan);
+            border-radius: 2px;
+        }
+
+        .module-header .subtitle {
+            font-size: 0.8vw;
+            color: rgba(255,255,255,0.55);
+            font-weight: normal;
+            margin-left: auto;
+        }
+
+        .module-content {
+            flex: 1;
+            position: relative;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .sidebar .module:first-child {
+            flex: 0.7;
+        }
+
+        .sidebar .module.large {
+            flex: 0.5;
+        }
+
+        /* 关键修改：地图区域铺满，去掉上下黑边 */
+        #map-container {
+            flex: 1;
+            border: 2px solid var(--cyan);
+            box-shadow: 0 0 18px rgba(0,216,255,0.22);
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 1;
+            cursor: pointer;
+            min-height: 0;
+        }
+
+        /* 蓝色按钮 */
+        .map-btn {
+            position: absolute;
+            z-index: 10;
+            background: linear-gradient(180deg, rgba(31,143,255,0.92) 0%, rgba(21,111,209,0.92) 100%);
+            border: 1px solid rgba(150, 220, 255, 0.95);
+            color: #ffffff;
+            border-radius: 7px;
+            padding: 6px 14px;
+            font-size: 0.82vw;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(31,143,255,0.28);
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .map-btn .btn-dot {
+            width: 7px;
+            height: 7px;
+            background-color: #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(255,255,255,0.9);
+        }
+
+        .map-btn:hover {
+            background: linear-gradient(180deg, rgba(52,163,255,1) 0%, rgba(25,122,224,1) 100%);
+            box-shadow: 0 0 16px rgba(31,143,255,0.45);
+            transform: scale(1.05);
+        }
+
+        #status-bar-container {
+            height: 20vh;
+            display: flex;
+            gap: 1.5vw;
+        }
+
+        .status-panel {
+            flex: 1;
+            background-color: rgba(7, 20, 33, 0.9);
+            border: 1px solid var(--dark-cyan);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            padding: 8px 1vw;
+            color: var(--cyan);
+            box-shadow: inset 0 0 10px rgba(0,216,255,0.08);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 216, 255, 0.2);
+            padding-bottom: 5px;
+            margin-bottom: 8px;
+        }
+
+        .panel-title {
+            font-size: 1vw;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(0,216,255,0.35);
+        }
+
+        .action-btn {
+            background: rgba(0,216,255,0.08);
+            border: 1px solid var(--cyan);
+            color: var(--cyan);
+            border-radius: 3px;
+            padding: 3px 10px;
+            font-size: 0.8vw;
+            cursor: pointer;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        .action-btn:hover {
+            background: var(--cyan);
+            color: #000;
+            box-shadow: 0 0 10px rgba(0,216,255,0.35);
+        }
+
+        .panel-content {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            gap: 1vw;
+        }
+
+        .status-panel .icon-vehicle {
+            font-size: 2.5vw;
+        }
+
+        .status-panel .info {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            font-size: 0.9vw;
+        }
+
+        .status-panel .info .info-item {
+            display: flex;
+            gap: 5px;
+        }
+
+        .status-panel .info label {
+            color: rgba(255,255,255,0.7);
+            white-space: nowrap;
+        }
+
+        .status-panel .info span {
+            font-weight: bold;
+            color: var(--cyan);
+        }
+
+        .zoomed-container {
+            z-index: 9999 !important;
+            box-shadow:
+                0 0 50px rgba(0, 0, 0, 0.8),
+                0 0 35px rgba(0, 216, 255, 0.45),
+                inset 0 0 20px rgba(0, 216, 255, 0.18) !important;
+            border-color: var(--cyan) !important;
+            background-color: rgba(7, 20, 33, 0.98) !important;
+        }
+
+        .big-chart-wapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+        }
+
+        .big-num-chart {
+            width: 70%;
+            height: 100%;
+        }
+
+        .stat-details {
+            width: 30%;
+            padding-left: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 10px;
+            font-size: 0.8vw;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-item .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--cyan);
+            margin-right: 5px;
+        }
+
+        .stat-item .num {
+            color: var(--cyan);
+            font-weight: bold;
+            font-size: 1.1vw;
+            text-shadow: var(--text-glow);
+        }
+
+        .dark-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8vw;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .dark-table th {
+            text-align: left;
+            color: var(--cyan);
+            padding: 8px 4px;
+            border-bottom: 1px solid rgba(0,216,255,0.3);
+        }
+
+        .dark-table td {
+            padding: 6px 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .dark-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .dark-table .level-high {
+            color: #ff4d4f;
+        }
+    </style>
+
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script>
+        var pybridge;
+        document.addEventListener("DOMContentLoaded", function() {
+            if (typeof qt != 'undefined') {
+                new QWebChannel(qt.webChannelTransport, function(channel) {
+                    pybridge = channel.objects.pybridge;
+                });
+            }
+
+            const targetContainers = document.querySelectorAll('.module, .status-panel, #map-container');
+            const scaleBody = 0.95;
+            const zoomScale = 1.5;
+
+            targetContainers.forEach(container => {
+                container.addEventListener('click', function(e) {
+                    if (e.target.closest('button')) return;
+                    e.stopPropagation();
+
+                    if (this.classList.contains('zoomed-container')) {
+                        this.classList.remove('zoomed-container');
+                        this.style.transform = '';
+                        return;
+                    }
+
+                    targetContainers.forEach(c => {
+                        c.classList.remove('zoomed-container');
+                        c.style.transform = '';
+                    });
+
+                    const rect = this.getBoundingClientRect();
+                    const viewportCenterX = window.innerWidth / 2;
+                    const viewportCenterY = window.innerHeight / 2;
+                    const elementCenterX = rect.left + (rect.width / 2);
+                    const elementCenterY = rect.top + (rect.height / 2);
+
+                    const translateX = (viewportCenterX - elementCenterX) / scaleBody;
+                    const translateY = (viewportCenterY - elementCenterY) / scaleBody;
+
+                    this.classList.add('zoomed-container');
+                    this.style.transform = `translate(${translateX}px, ${translateY}px) scale(${zoomScale})`;
+                });
+            });
+
+            document.body.addEventListener('click', function() {
+                targetContainers.forEach(c => {
+                    c.classList.remove('zoomed-container');
+                    c.style.transform = '';
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+
+<div id="top-bar">
+    <div class="info-item">
+        <span id="sys_date">{{ current_date }}</span>
+        <span id="sys_time">{{ current_time }}</span>
+    </div>
+    <div id="platform">停车场智慧监控大屏</div>
+    <div class="info-item">
+        <span>多云</span>
+        <span>26℃</span>
+    </div>
+</div>
+
+<div id="main-container">
+    <div class="sidebar">
+        <div class="module">
+            <div class="module-header">
+                <div class="icon"></div>
+                <span>停车位统计</span>
+                <span class="subtitle">实时统计</span>
+            </div>
+            <div class="module-content">
+                <div class="big-chart-wapper">
+                    <div id="occupancy_chart" class="big-num-chart">{{ occupancy_chart|safe }}</div>
+                    <div class="stat-details">
+                        <div class="stat-item"><span class="dot"></span><span>总泊位</span><span class="num" id="val_total">{{ stats.total_spots }}</span></div>
+                        <div class="stat-item"><span class="dot" style="background:#00d8ff;"></span><span>已占用</span><span class="num" id="val_occ">{{ stats.occupied_spots }}</span></div>
+                        <div class="stat-item"><span class="dot" style="background:#fadb14;"></span><span>空闲</span><span class="num" id="val_free">{{ stats.free_spots }}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="module large">
+            <div class="module-header">
+                <div class="icon"></div>
+                <span>今日进出车辆次数</span>
+                <span class="subtitle">当日趋势</span>
+            </div>
+            <div class="module-content">{{ entry_exit_chart|safe }}</div>
+        </div>
+
+        <div class="module">
+            <div class="module-header">
+                <div class="icon"></div>
+                <span>各区车位使用率</span>
+                <button class="action-btn" style="margin-left: auto; font-size: 0.7vw; padding: 2px 8px;" onclick="pybridge.openVehicle()">
+                    ⚙️ 车辆管理
+                </button>
+            </div>
+            <div class="module-content">{{ district_usage_chart|safe }}</div>
+        </div>
+    </div>
+
+    <div id="center-core">
+        <div id="map-container" style="background-image:url('parking_map.png');">
+
+            <!-- 位置重新调整后的蓝色按钮 -->
+            <button class="map-btn" style="top: 76%; left: 16%;" onclick="pybridge.openMonitor()">
+                <span class="btn-dot"></span>入口详情
+            </button>
+
+            <button class="map-btn" style="top: 60%; left: 43%;" onclick="pybridge.openRecord()">
+                <span class="btn-dot"></span>收费查询
+            </button>
+
+            <button class="map-btn" style="top: 31%; left: 49%;" onclick="pybridge.openMap()">
+                <span class="btn-dot"></span>内部区域详情
+            </button>
+
+            <button class="map-btn" style="top: 76%; left: 73%;" onclick="pybridge.openMonitor()">
+                <span class="btn-dot"></span>出口详情
+            </button>
+        </div>
+
+        <div id="status-bar-container">
+            <div class="status-panel">
+                <div class="panel-header">
+                    <span class="panel-title">当前入口车辆记录</span>
+                    <button class="action-btn" onclick="pybridge.openMonitor()">点击查看实时状况</button>
+                </div>
+                <div class="panel-content">
+                    <div class="icon-vehicle">🚗💨</div>
+                    <div class="info">
+                        <div class="info-item"><label>车牌号:</label><span id="entry_plate">{{ current_entry.plate }}</span></div>
+                        <div class="info-item"><label>分配车位:</label><span id="entry_spot">{{ current_entry.spot }}</span></div>
+                        <div class="info-item"><label>入场时间:</label><span id="entry_time">{{ current_entry.time }}</span></div>
+                        <div class="info-item"><label>当前状态:</label><span id="entry_status">{{ current_entry.status }}</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-panel">
+                <div class="panel-header">
+                    <span class="panel-title">当前出口车辆记录</span>
+                    <button class="action-btn" onclick="pybridge.openMonitor()">点击查看实时状况</button>
+                </div>
+                <div class="panel-content">
+                    <div class="icon-vehicle">🚗💨</div>
+                    <div class="info">
+                        <div class="info-item"><label>车牌号:</label><span id="exit_plate">{{ current_exit.plate }}</span></div>
+                        <div class="info-item"><label>使用车位:</label><span id="exit_spot">{{ current_exit.spot }}</span></div>
+                        <div class="info-item"><label>停车时长:</label><span id="exit_duration">{{ current_exit.duration }}</span></div>
+                        <div class="info-item"><label>产生费用:</label><span id="exit_fee">{{ current_exit.fee }}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="module">
+            <div class="module-header">
+                <div class="icon"></div>
+                <span>停车场收入分布</span>
+                <span class="subtitle">收入构成</span>
+            </div>
+            <div class="module-content">
+                {{ income_dist_chart|safe }}
+            </div>
+        </div>
+
+        <div class="module large">
+            <div class="module-header">
+                <div class="icon"></div>
+                <span>停车场月收入趋势</span>
+                <span class="subtitle">近12月统计</span>
+            </div>
+            <div class="module-content">{{ monthly_income_chart|safe }}</div>
+        </div>
+
+        <div class="module">
+            <div class="module-header">
+                <div class="icon"></div>
+                <span>告警事件列表</span>
+                <span class="subtitle">异常监测</span>
+            </div>
+            <div class="module-content" style="overflow-y: auto;">
+                <table class="dark-table">
+                    <thead>
+                        <tr>
+                            <th>告警时间</th>
+                            <th>告警位置</th>
+                            <th>告警信息</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alarm_tbody">
+                        {% for event in alarm_events %}
+                        <tr>
+                            <td>{{ event.time }}</td>
+                            <td>{{ event.location }}</td>
+                            <td class="{% if event.level == 'high' %}level-high{% endif %}">{{ event.info }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
